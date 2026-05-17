@@ -20,7 +20,7 @@ interface FillFormPageProps {
 }
 
 export default function FillFormPage({ onNavigate }: FillFormPageProps) {
-  const { forms, selectedFormId, submitResponse } = useForms();
+  const { forms, selectedFormId, submitResponse, user } = useForms();
   
   // Find currently active form or default to the first one available
   const activeForm = forms.find(f => f.id === selectedFormId) || forms[0];
@@ -96,7 +96,8 @@ export default function FillFormPage({ onNavigate }: FillFormPageProps) {
           userEmail: String(submissionEmail),
           answers: answers,
           completionTime: durationSeconds,
-          emotion: emotion
+          emotion: emotion,
+          userId: user ? user.id : undefined
         });
         
         setIsSubmitting(false);

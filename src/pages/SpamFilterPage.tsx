@@ -57,7 +57,16 @@ export default function SpamFilterPage() {
             </div>
 
             <div className="space-y-4">
-               {spamResponses.map((r, i) => (
+               {spamResponses.length === 0 ? (
+                  <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-10 text-center space-y-4">
+                     <ShieldCheck className="w-12 h-12 text-emerald-400 mx-auto" />
+                     <h3 className="text-base font-bold text-white">Database Integrity Pristine</h3>
+                     <p className="text-xs text-slate-500 font-bold max-w-sm mx-auto leading-relaxed">
+                        No spam signatures, keyboard mash anomalies, or bot patterns have been detected. All response logs pass deep AI cognitive integrity validation.
+                     </p>
+                  </div>
+                ) : (
+                   spamResponses.map((r, i) => (
                   <motion.div 
                     key={r.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -89,8 +98,8 @@ export default function SpamFilterPage() {
                            <X className="w-5 h-5" />
                         </button>
                      </div>
-                  </motion.div>
-               ))}
+                   </motion.div>
+                )))}
             </div>
          </div>
 

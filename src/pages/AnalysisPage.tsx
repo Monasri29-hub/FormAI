@@ -74,6 +74,30 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
     r.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (responses.length === 0) {
+    return (
+      <div className="flex-1 p-8 bg-slate-950 flex flex-col items-center justify-center min-h-[70vh]">
+        <div className="max-w-md border border-white/10 backdrop-blur-xl bg-slate-900/40 p-8 rounded-3xl text-center space-y-6 shadow-2xl relative">
+          <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 mx-auto">
+            <LineChart className="text-white w-8 h-8" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white tracking-tight mb-2">No Submissions Recorded</h2>
+            <p className="text-xs text-slate-400 font-bold leading-relaxed max-w-sm mx-auto">
+              Intelligence graphs, emotional heatmaps, and respondent tracking are currently empty. Share the live form link from the main dashboard to register responses first!
+            </p>
+          </div>
+          <button 
+            onClick={() => onNavigate('dashboard')}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+          >
+            ← Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <header className="px-8 py-6 flex items-center justify-between sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-white/5">

@@ -14,7 +14,8 @@ import {
   Plus,
   Trash2,
   Edit,
-  LineChart as AnalysisIcon
+  LineChart as AnalysisIcon,
+  LogOut
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useForms } from '../context/FormContext';
@@ -28,7 +29,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentPage, onNavigate, isCollapsed, setIsCollapsed }: SidebarProps) {
-  const { forms, deleteForm } = useForms();
+  const { forms, deleteForm, user, logout } = useForms();
 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -132,22 +133,40 @@ export default function Sidebar({ currentPage, onNavigate, isCollapsed, setIsCol
         <button 
           onClick={() => onNavigate('create')}
           className={cn(
-            "w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-2xl text-xs font-black transition-all shadow-lg shadow-blue-500/20 active:scale-95",
+            "w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-2xl text-xs font-black transition-all shadow-lg shadow-blue-500/20 active:scale-95 cursor-pointer",
             isCollapsed ? "p-3" : "py-4"
           )}
         >
           <Plus className="w-5 h-5" />
           {!isCollapsed && <span>NEW FORM</span>}
         </button>
+
+        {user && (
+          <div className={cn("p-2.5 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3 overflow-hidden", isCollapsed ? "justify-center" : "")}>
+            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold shrink-0 border border-white/10 text-xs">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate leading-none">{user.name}</p>
+                <span className="inline-block px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/10 mt-1">Admin</span>
+              </div>
+            )}
+          </div>
+        )}
+
         <button 
-          onClick={() => onNavigate('landing')}
+          onClick={() => {
+            logout();
+            onNavigate('landing');
+          }}
           className={cn(
-            "w-full flex items-center gap-4 text-slate-600 p-3.5 rounded-2xl hover:text-slate-300 transition-all",
+            "w-full flex items-center gap-4 text-slate-500 hover:text-red-400 p-3.5 rounded-2xl transition-all cursor-pointer",
             isCollapsed ? "justify-center" : ""
           )}
         >
-          <Settings className="w-5 h-5 shrink-0" />
-          {!isCollapsed && <span className="text-sm font-bold">Settings</span>}
+          <LogOut className="w-5 h-5 shrink-0" />
+          {!isCollapsed && <span className="text-sm font-bold">Logout</span>}
         </button>
       </div>
     </motion.aside>

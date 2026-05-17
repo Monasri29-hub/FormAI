@@ -9,14 +9,16 @@ import AIInsightsPage from './pages/AIInsightsPage';
 import SpamFilterPage from './pages/SpamFilterPage';
 import SavedFormsPage from './pages/SavedFormsPage';
 import TemplatesPage from './pages/TemplatesPage';
+import AuthPage from './pages/AuthPage';
+import UserPortalPage from './pages/UserPortalPage';
 import AppLayout from './components/AppLayout';
 import { FormProvider, useForms } from './context/FormContext';
 import { Page, Template } from './types';
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState<Page>('landing');
+  const [currentPage, setCurrentPage] = useState<Page | any>('landing');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const { setSelectedFormId } = useForms();
+  const { user, setSelectedFormId } = useForms();
 
   // Smooth scroll to top on page change
   useEffect(() => {
@@ -33,6 +35,27 @@ function AppContent() {
       setCurrentPage('fill');
     }
   }, [setSelectedFormId]);
+
+  // Authentication Route Guard
+  useEffect(() => {
+    const adminPages = ['dashboard', 'analysis', 'responses', 'insights', 'spam', 'saved-forms', 'create', 'templates'];
+    
+    if (adminPages.includes(currentPage)) {
+      if (!user) {
+        console.log('🔒 Unauthenticated access to admin page. Redirecting to Auth page.');
+        setCurrentPage('auth');
+      } else if (user.role !== 'admin') {
+        console.log('🔒 Unauthorized access. Standard users redirected to User Portal.');
+        setCurrentPage('user-portal');
+      }
+    } else if (currentPage === 'user-portal') {
+      if (!user) {
+        setCurrentPage('auth');
+      } else if (user.role === 'admin') {
+        setCurrentPage('dashboard');
+      }
+    }
+  }, [currentPage, user]);
 
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template);
@@ -70,6 +93,10 @@ function AppContent() {
     switch (currentPage) {
       case 'landing':
         return <LandingPage onNavigate={setCurrentPage} />;
+      case 'auth':
+        return <AuthPage onNavigate={setCurrentPage} />;
+      case 'user-portal':
+        return <UserPortalPage onNavigate={setCurrentPage} />;
       case 'create':
         return <CreateFormPage onNavigate={setCurrentPage} template={selectedTemplate} onClearTemplate={() => setSelectedTemplate(null)} />;
       case 'fill':
