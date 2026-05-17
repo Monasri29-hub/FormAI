@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, Download, FileDown, Search, Filter, 
@@ -8,24 +8,68 @@ import {
   LineChart, PieChart as PieChartIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useForms } from '../context/FormContext';
 import { MOCK_RESPONSES, MOCK_GROUP_ANALYSIS } from '../dummyData/mockResponses';
 import { 
   SentimentBarChart, 
   ParticipationAreaChart, 
   PersonalityPieChart 
 } from '../components/charts/ResponsiveCharts';
-import { FormResponse, Page } from '../types';
+import { FormResponse, Page, GroupAnalysis } from '../types';
 
 interface AnalysisPageProps {
   onNavigate: (page: Page) => void;
 }
 
 export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
+  const { selectedFormId, fetchGroupAnalysis, forms, responses } = useForms();
+  const currentForm = forms.find(f => f.id === selectedFormId) || forms[0];
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedResponse, setSelectedResponse] = useState<FormResponse | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'responses'>('overview');
+  const [groupAnalysis, setGroupAnalysis] = useState<GroupAnalysis | null>(null);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
 
-  const filteredResponses = MOCK_RESPONSES.filter(r => 
+  // Fetch active aggregate analysis on form selection
+  useEffect(() => {
+    if (!selectedFormId) return;
+    setIsAnalysisLoading(true);
+    fetchGroupAnalysis(selectedFormId)
+      .then(data => {
+        setGroupAnalysis(data);
+        setIsAnalysisLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching group metrics:', err);
+        setIsAnalysisLoading(false);
+      });
+  }, [selectedFormId]);
+
+  // Reset inspected response on selected form switch
+  useEffect(() => {
+    setSelectedResponse(null);
+  }, [selectedFormId]);
+
+  const activeAnalysis = groupAnalysis || MOCK_GROUP_ANALYSIS;
+
+  // Real live metrics calculation
+  const totalVolume = responses.length;
+  
+  const avgSentiment = responses.length > 0
+    ? activeAnalysis.avgSentimentScore
+    : 0;
+
+  const avgEngagement = responses.length > 0
+    ? Math.round(responses.reduce((acc, curr) => acc + (curr.analysis.engagementScore || 0), 0) / responses.length)
+    : 0;
+
+  const spamCount = responses.filter(r => r.isSpam).length;
+  const integrity = responses.length > 0
+    ? Math.round(((responses.length - spamCount) / responses.length) * 100)
+    : 100;
+
+  const filteredResponses = responses.filter(r => 
     r.userName.toLowerCase().includes(searchTerm.toLowerCase()) || 
     r.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -36,7 +80,9 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
             <h1 className="text-3xl font-black tracking-tight text-white">Full Intelligence Analysis</h1>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Course Experience Survey • 154 Responses</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">
+              {currentForm?.title || 'Form'} • {totalVolume} {totalVolume === 1 ? 'Response' : 'Responses'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -84,10 +130,10 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
               {/* Stat Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { label: 'Total Volume', value: '154', icon: MessageSquare, color: 'text-blue-400', sub: 'Submissions this week' },
-                  { label: 'Avg Sentiment', value: '82%', icon: Smile, color: 'text-green-400', sub: 'Highly positive' },
-                  { label: 'Engage Score', value: '78/100', icon: Zap, color: 'text-amber-400', sub: 'Optimal participation' },
-                  { label: 'Integrity', value: '98.4%', icon: ShieldCheck, color: 'text-indigo-400', sub: 'Clean data verified' }
+                  { label: 'Total Volume', value: totalVolume.toString(), icon: MessageSquare, color: 'text-blue-400', sub: 'Submissions gathered' },
+                  { label: 'Avg Sentiment', value: `${avgSentiment}%`, icon: Smile, color: 'text-green-400', sub: avgSentiment > 70 ? 'Highly positive tone' : 'Neutral/Balanced tone' },
+                  { label: 'Engage Score', value: `${avgEngagement}/100`, icon: Zap, color: 'text-amber-400', sub: 'Calculated response quality' },
+                  { label: 'Integrity Rate', value: `${integrity}%`, icon: ShieldCheck, color: 'text-indigo-400', sub: `${spamCount} spam filter anomalies` }
                 ].map((stat, i) => (
                   <div key={i} className="glass-card flex flex-col justify-between group">
                     <div className="flex justify-between items-start mb-6">
@@ -112,14 +158,23 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
                     <LineChart className="text-blue-400 w-5 h-5" />
                     <h2 className="text-lg font-bold">Participation Trends</h2>
                   </div>
-                  <ParticipationAreaChart data={MOCK_GROUP_ANALYSIS.participationTrends} />
+                  {activeAnalysis.participationTrends && activeAnalysis.participationTrends.length > 0 ? (
+                    <ParticipationAreaChart data={activeAnalysis.participationTrends} />
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-slate-600 font-semibold text-sm">Awaiting trends data.</div>
+                  )}
                 </div>
+                
                 <div className="glass-card">
                   <div className="flex items-center gap-2 mb-8">
                     <PieChartIcon className="text-purple-400 w-5 h-5" />
                     <h2 className="text-lg font-bold">Personality Distribution</h2>
                   </div>
-                  <PersonalityPieChart data={Object.entries(MOCK_GROUP_ANALYSIS.personalityDistribution).map(([name, value]) => ({ name, value }))} />
+                  {activeAnalysis.personalityDistribution && Object.keys(activeAnalysis.personalityDistribution).length > 0 ? (
+                    <PersonalityPieChart data={Object.entries(activeAnalysis.personalityDistribution).map(([name, value]) => ({ name, value }))} />
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-slate-600 font-semibold text-sm">Awaiting traits calculation.</div>
+                  )}
                 </div>
               </div>
 
@@ -127,11 +182,11 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="glass-card bg-gradient-to-br from-indigo-950/30 to-blue-950/30">
                   <div className="flex items-center gap-2 mb-8">
-                    <Brain className="text-indigo-400 w-6 h-6" />
-                    <h2 className="text-xl font-extrabold tracking-tight">AI Group Insights</h2>
+                    <Brain className="text-indigo-400 w-6 h-6 animate-pulse" />
+                    <h2 className="text-xl font-extrabold tracking-tight">AI Group Insights (Qwen)</h2>
                   </div>
                   <div className="space-y-4">
-                    {MOCK_GROUP_ANALYSIS.aiInsights.map((insight, i) => (
+                    {activeAnalysis.aiInsights && activeAnalysis.aiInsights.map((insight, i) => (
                       <div key={i} className="flex gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all group">
                         <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0 group-hover:scale-150 transition-transform" />
                         <p className="text-sm text-slate-300 leading-relaxed font-medium">{insight}</p>
@@ -143,7 +198,7 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
                 <div className="glass-card">
                   <h2 className="text-lg font-bold mb-8">Engagement Heatmap</h2>
                   <div className="space-y-3">
-                    {MOCK_GROUP_ANALYSIS.engagementHeatmap.slice(0, 5).map((row, i) => (
+                    {activeAnalysis.engagementHeatmap && activeAnalysis.engagementHeatmap.slice(0, 5).map((row, i) => (
                       <div key={i} className="flex gap-2 h-8">
                         {row.map((cell, j) => (
                           <div 
@@ -188,35 +243,39 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide">
-                  {filteredResponses.map((r) => (
-                    <button 
-                      key={r.id}
-                      onClick={() => setSelectedResponse(r)}
-                      className={cn(
-                        "w-full p-4 rounded-2xl border text-left transition-all group flex items-center justify-between",
-                        selectedResponse?.id === r.id 
-                          ? "bg-blue-600/10 border-blue-500/50 shadow-xl shadow-blue-500/5 scale-[1.02]" 
-                          : "bg-white/5 border-white/5 hover:border-white/20"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center border font-bold text-sm",
-                          r.isSpam ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-blue-500/10 border-blue-400/20 text-blue-400"
-                        )}>
-                          {r.userName.charAt(0)}
+                  {filteredResponses.length > 0 ? (
+                    filteredResponses.map((r) => (
+                      <button 
+                        key={r.id}
+                        onClick={() => setSelectedResponse(r)}
+                        className={cn(
+                          "w-full p-4 rounded-2xl border text-left transition-all group flex items-center justify-between",
+                          selectedResponse?.id === r.id 
+                            ? "bg-blue-600/10 border-blue-500/50 shadow-xl shadow-blue-500/5 scale-[1.02]" 
+                            : "bg-white/5 border-white/5 hover:border-white/20"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center border font-bold text-sm",
+                            r.isSpam ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-blue-500/10 border-blue-400/20 text-blue-400"
+                          )}>
+                            {r.userName ? r.userName.charAt(0) : 'A'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white mb-0.5">{r.userName || 'Anonymous'}</p>
+                            <p className="text-[10px] text-slate-500 font-medium truncate w-40">{r.userEmail || 'anonymous@example.com'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-white mb-0.5">{r.userName}</p>
-                          <p className="text-[10px] text-slate-500 font-medium">{r.userEmail}</p>
-                        </div>
-                      </div>
-                      <ChevronRight className={cn(
-                        "w-4 h-4 transition-transform",
-                        selectedResponse?.id === r.id ? "translate-x-1 text-blue-400" : "text-slate-600 group-hover:text-slate-400"
-                      )} />
-                    </button>
-                  ))}
+                        <ChevronRight className={cn(
+                          "w-4 h-4 transition-transform",
+                          selectedResponse?.id === r.id ? "translate-x-1 text-blue-400" : "text-slate-600 group-hover:text-slate-400"
+                        )} />
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-center p-8 text-slate-600 text-xs font-semibold">No responses matched search criteria.</div>
+                  )}
                 </div>
               </div>
 
@@ -233,7 +292,7 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-6">
                         <div className="w-20 h-20 rounded-3xl bg-blue-600 flex items-center justify-center text-3xl font-extrabold text-white shadow-2xl shadow-blue-500/30">
-                          {selectedResponse.userName.charAt(0)}
+                          {selectedResponse.userName ? selectedResponse.userName.charAt(0) : 'A'}
                         </div>
                         <div>
                           <h2 className="text-4xl font-extrabold tracking-tighter text-white mb-1">{selectedResponse.userName}</h2>
@@ -244,7 +303,7 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {selectedResponse.isSpam && <span className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-[10px] font-bold text-red-400 uppercase tracking-widest">SPAM DETECTED</span>}
+                        {selectedResponse.isSpam && <span className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-[10px] font-bold text-red-400 uppercase tracking-widest animate-pulse">SPAM DETECTED</span>}
                         <button className="btn-secondary !p-2"><MoreVertical className="w-5 h-5" /></button>
                       </div>
                     </div>
@@ -253,22 +312,22 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="p-6 rounded-3xl bg-blue-500/5 border border-blue-500/10">
                         <div className="flex items-center gap-2 text-blue-400 mb-4">
-                          <Brain className="w-5 h-5" />
-                          <span className="text-xs font-bold uppercase tracking-widest">AI Profile Summary</span>
+                          <Brain className="w-5 h-5 animate-pulse" />
+                          <span className="text-xs font-bold uppercase tracking-widest">Qwen Cognitive Profile</span>
                         </div>
                         <p className="text-sm text-slate-300 leading-relaxed font-medium italic">"{selectedResponse.analysis.summary}"</p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="p-5 rounded-2xl bg-white/5 border border-white/5">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase block mb-2 tracking-widest">Sentiment</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase block mb-2 tracking-widest">Sentiment vibe</span>
                           <div className="flex items-center gap-2">
                             <Smile className="text-green-400 w-5 h-5" />
                             <span className="text-lg font-bold text-white capitalize">{selectedResponse.analysis.sentiment}</span>
                           </div>
                         </div>
                         <div className="p-5 rounded-2xl bg-white/5 border border-white/5">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase block mb-2 tracking-widest">Confidence</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase block mb-2 tracking-widest">Confidence Index</span>
                           <div className="flex items-center gap-2">
                             <div className="text-lg font-bold text-white">{selectedResponse.analysis.confidence}%</div>
                             <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -282,15 +341,20 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
                     {/* Tags */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Heart className="w-4 h-4 text-rose-500" /> Key Personality Traits</h4>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <Heart className="w-4 h-4 text-rose-500" /> Behavioral Personality Traits
+                        </h4>
                         <div className="flex flex-wrap gap-2">
                           {selectedResponse.analysis.personality.map((p, i) => (
                             <span key={i} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400">{p}</span>
                           ))}
                         </div>
                       </div>
+                      
                       <div>
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Star className="w-4 h-4 text-amber-500" /> Areas of Interest</h4>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <Star className="w-4 h-4 text-amber-500" /> Focal Topics of Interest
+                        </h4>
                         <div className="flex flex-wrap gap-2">
                           {selectedResponse.analysis.interestAreas.map((ia, i) => (
                             <span key={i} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-400">{ia}</span>
@@ -303,13 +367,18 @@ export default function AnalysisPage({ onNavigate }: AnalysisPageProps) {
                     <div>
                       <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-4">Raw Response Data</h4>
                       <div className="space-y-6">
-                        {Object.entries(selectedResponse.answers).map(([id, val], i) => (
-                          <div key={id} className="relative pl-6 border-l border-white/10 group">
-                            <div className="absolute left-[-4px] top-1 w-2 h-2 rounded-full bg-blue-500 scale-0 group-hover:scale-100 transition-transform" />
-                            <p className="text-[10px] font-extrabold text-slate-600 uppercase mb-1 tracking-tight">Question ID: {id}</p>
-                            <p className="text-white font-medium">{String(val)}</p>
-                          </div>
-                        ))}
+                        {Object.entries(selectedResponse.answers).map(([id, val], i) => {
+                          const matchingQuestion = currentForm?.questions?.find(q => q.id === id);
+                          return (
+                            <div key={id} className="relative pl-6 border-l border-white/10 group">
+                              <div className="absolute left-[-4px] top-1 w-2 h-2 rounded-full bg-blue-500 scale-0 group-hover:scale-100 transition-transform" />
+                              <p className="text-[10px] font-extrabold text-slate-600 uppercase mb-1 tracking-tight">
+                                {matchingQuestion ? matchingQuestion.title : `Question (ID: ${id})`}
+                              </p>
+                              <p className="text-white font-medium">{String(val)}</p>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </motion.div>

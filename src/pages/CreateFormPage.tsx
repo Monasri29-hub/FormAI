@@ -33,7 +33,7 @@ import { Question, QuestionType, Form, Page, Template } from '../types';
 import AIChatbot from '../components/chatbot/AIChatbot';
 import { getAISuggestion } from '../lib/aiHelpers';
 import { useForms } from '../context/FormContext';
-import { Copy, Share2, Mail as MailIcon, Linkedin } from 'lucide-react';
+import { Copy, Share2, Mail as MailIcon, Linkedin, Loader2, AlertCircle } from 'lucide-react';
 
 interface CreateFormPageProps {
   onNavigate: (page: Page) => void;
@@ -48,13 +48,47 @@ const SUGGESTIONS = [
 ];
 
 export default function CreateFormPage({ onNavigate, template, onClearTemplate }: CreateFormPageProps) {
-  const { addForm } = useForms();
+  const { addForm, generateFormFromLink } = useForms();
   const [title, setTitle] = useState(template?.name || 'Untitled Form');
   const [description, setDescription] = useState(template?.description || '');
   const [questions, setQuestions] = useState<Question[]>(
     template?.questions?.length ? template.questions : [{ id: '1', type: 'text', title: 'Enter your name', required: true }]
   );
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [linkInput, setLinkInput] = useState('');
+  const [isGeneratingFromLink, setIsGeneratingFromLink] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [generationSuccess, setGenerationSuccess] = useState(false);
+
+  const handleGenerateFromLink = async () => {
+    if (!linkInput.trim()) return;
+    setIsGeneratingFromLink(true);
+    setGenerationError(null);
+    setGenerationSuccess(false);
+    try {
+      let formattedUrl = linkInput.trim();
+      if (!/^https?:\/\//i.test(formattedUrl)) {
+        formattedUrl = 'https://' + formattedUrl;
+      }
+      
+      const data = await generateFormFromLink(formattedUrl);
+      if (data && data.questions && data.questions.length > 0) {
+        setTitle(data.title);
+        setDescription(data.description);
+        setQuestions(data.questions);
+        setGenerationSuccess(true);
+        setLinkInput('');
+        setTimeout(() => setGenerationSuccess(false), 4000);
+      } else {
+        throw new Error("No questions returned from link generator");
+      }
+    } catch (err: any) {
+      setGenerationError(err.message || "Failed to generate questions. Please ensure the link is reachable.");
+    } finally {
+      setIsGeneratingFromLink(false);
+    }
+  };
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [newQuestionId, setNewQuestionId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLElement>(null);
@@ -82,15 +116,17 @@ export default function CreateFormPage({ onNavigate, template, onClearTemplate }
   const [isCopying, setIsCopying] = useState(false);
 
   const handleSave = () => {
+    const formId = Math.random().toString(36).substr(2, 6);
+    const secureUrl = `${window.location.origin}/?fill=${formId}`;
     const newForm: Form = {
-      id: Math.random().toString(36).substr(2, 6),
+      id: formId,
       title,
       description,
       questions,
       createdAt: new Date().toISOString(),
       responsesCount: 0,
       status: 'active',
-      shareUrl: `smartpulse.ai/form/${Math.random().toString(36).substr(2, 6)}`
+      shareUrl: secureUrl
     };
     addForm(newForm);
     setSavedForm(newForm);
@@ -359,6 +395,58 @@ export default function CreateFormPage({ onNavigate, template, onClearTemplate }
                 </button>
               </motion.div>
             )}
+
+            {/* AI Link Form Scraper Widget */}
+            <div className="glass-card bg-gradient-to-r from-blue-950/20 via-indigo-950/20 to-purple-950/20 border-blue-500/20 p-6 relative overflow-hidden group">
+              <div className="absolute -right-20 -top-20 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-700" />
+              
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-blue-400 animate-pulse" />
+                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">AI Form Builder from Website Link</span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                Paste any event website, documentation link, or product page. SmartPulse AI will fetch the contents and use Qwen-3-32b to automatically design a contextual feedback/registration form.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={linkInput}
+                  onChange={(e) => setLinkInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleGenerateFromLink()}
+                  placeholder="https://example.com/your-event-or-page"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-white placeholder:text-slate-600"
+                />
+                <button
+                  onClick={handleGenerateFromLink}
+                  disabled={isGeneratingFromLink || !linkInput.trim()}
+                  className="btn-primary shrink-0 py-3 px-6 text-xs flex items-center justify-center gap-2 relative overflow-hidden group/btn disabled:opacity-50"
+                >
+                  {isGeneratingFromLink ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4 text-white group-hover/btn:rotate-12 transition-transform" />
+                      <span>Analyze & Build</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              {generationError && (
+                <p className="text-[10px] font-bold text-red-400 mt-2.5 flex items-center gap-1.5 animate-pulse">
+                  <AlertCircle className="w-3.5 h-3.5" /> {generationError}
+                </p>
+              )}
+              {generationSuccess && (
+                <p className="text-[10px] font-bold text-emerald-400 mt-2.5 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5" /> Contextual questions compiled successfully! View questions below.
+                </p>
+              )}
+            </div>
 
             {/* Form Info Card */}
             <div className="glass-card !border-l-4" style={{ borderLeftColor: template?.theme?.primaryColor || '#3b82f6' }}>

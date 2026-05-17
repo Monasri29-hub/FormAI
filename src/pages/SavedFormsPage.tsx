@@ -10,6 +10,18 @@ import { Page } from '../types';
 
 export default function SavedFormsPage({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const { forms, deleteForm } = useForms();
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+
+  const handleCopyLink = (form: any) => {
+    // Generate secure link using active browser origin
+    const secureUrl = `${window.location.origin}/?fill=${form.id}`;
+    navigator.clipboard.writeText(secureUrl)
+      .then(() => {
+        setCopiedId(form.id);
+        setTimeout(() => setCopiedId(null), 2000);
+      })
+      .catch((err) => console.error('Failed to copy secure link:', err));
+  };
 
   return (
     <div className="flex-1 overflow-y-auto p-10 bg-slate-950 scrollbar-hide">
@@ -74,8 +86,17 @@ export default function SavedFormsPage({ onNavigate }: { onNavigate: (page: Page
                >
                  <Activity className="w-4 h-4" /> Open Dashboard
                </button>
-               <button className="px-4 py-3 rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
-                 <ExternalLink className="w-4 h-4" />
+               <button 
+                 onClick={() => handleCopyLink(form)}
+                 className={cn(
+                   "px-4 py-3 rounded-xl transition-all border font-bold text-xs uppercase flex items-center gap-2",
+                   copiedId === form.id 
+                     ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                     : "bg-white/5 text-slate-400 border-white/5 hover:text-white hover:bg-white/10"
+                 )}
+                 title="Copy secure form fill URL"
+               >
+                 {copiedId === form.id ? 'Copied!' : <ExternalLink className="w-4 h-4" />}
                </button>
             </div>
           </motion.div>

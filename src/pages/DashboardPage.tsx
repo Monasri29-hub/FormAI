@@ -63,7 +63,11 @@ const EMOTION_DATA = [
   { name: 'Frustrated', value: 10, color: '#ef4444' },
 ];
 
+import { useForms } from '../context/FormContext';
+
 export default function DashboardPage({ onNavigate }: DashboardPageProps) {
+  const { forms, selectedFormId, responses } = useForms();
+  const currentForm = forms.find(f => f.id === selectedFormId) || forms[0];
   const [isDemoRunning, setIsDemoRunning] = useState(false);
 
   const runDemo = () => {
@@ -79,7 +83,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           <div>
             <h1 className="text-4xl font-black tracking-tight mb-2 text-white">Form Performance</h1>
             <p className="text-slate-500 flex items-center gap-2 font-bold uppercase text-[10px] tracking-widest">
-              <Users className="w-4 h-4" /> Monitoring <span className="text-blue-400 font-black">"Student Experience Survey"</span> live
+              <Users className="w-4 h-4" /> Monitoring <span className="text-blue-400 font-black">"{currentForm?.title || 'Student Experience Survey'}"</span> live
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -99,7 +103,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           {/* Quick Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[
-              { label: 'Total Responses', value: '1,284', icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', trend: '+5%' },
+              { label: 'Total Responses', value: responses.length.toLocaleString(), icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', trend: '+5%' },
               { label: 'Completion Rate', value: '84.2%', icon: Percent, color: 'text-emerald-400', bg: 'bg-emerald-500/10', trend: '+12%' },
               { label: 'Engagement Score', value: '89/100', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/10', trend: '+2%' },
               { label: 'Avg. Fill Time', value: '2.5m', icon: Clock, color: 'text-indigo-400', bg: 'bg-indigo-500/10', trend: '-10s' },

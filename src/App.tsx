@@ -10,17 +10,29 @@ import SpamFilterPage from './pages/SpamFilterPage';
 import SavedFormsPage from './pages/SavedFormsPage';
 import TemplatesPage from './pages/TemplatesPage';
 import AppLayout from './components/AppLayout';
-import { FormProvider } from './context/FormContext';
+import { FormProvider, useForms } from './context/FormContext';
 import { Page, Template } from './types';
 
-export default function App() {
+function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('landing');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const { setSelectedFormId } = useForms();
 
   // Smooth scroll to top on page change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentPage]);
+
+  // Dynamic Query Parameter Parser for secure sharing link redirection
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fillFormId = params.get('fill') || params.get('form');
+    if (fillFormId) {
+      console.log(`🔗 SmartPulse shared form link parsed successfully. Redirecting to form: ${fillFormId}`);
+      setSelectedFormId(fillFormId);
+      setCurrentPage('fill');
+    }
+  }, [setSelectedFormId]);
 
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template);
@@ -70,9 +82,17 @@ export default function App() {
   };
 
   return (
+    <div className="min-h-screen selection:bg-blue-500/30 selection:text-blue-200">
+      {renderPage()}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
     <FormProvider>
       <div className="min-h-screen selection:bg-blue-500/30 selection:text-blue-200">
-        {renderPage()}
+        <AppContent />
       </div>
     </FormProvider>
   );
