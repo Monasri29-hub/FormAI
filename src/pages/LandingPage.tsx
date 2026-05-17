@@ -67,6 +67,12 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           </div>
           <div className="flex items-center gap-4">
             <button 
+              onClick={() => onNavigate('auth')}
+              className="text-slate-400 hover:text-white text-sm font-bold transition-all cursor-pointer px-4 py-2 hover:scale-[1.03] active:scale-95"
+            >
+              Sign In
+            </button>
+            <button 
               onClick={() => onNavigate('fill')}
               className="btn-secondary"
             >
