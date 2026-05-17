@@ -16,7 +16,7 @@ import { FormProvider, useForms } from './context/FormContext';
 import { Page, Template } from './types';
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState<Page | any>('landing');
+  const [currentPage, setCurrentPage] = useState<Page | any>('auth');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const { user, setSelectedFormId } = useForms();
 
@@ -104,7 +104,7 @@ function AppContent() {
       case 'templates':
         return <TemplatesPage onNavigate={setCurrentPage} onSelectTemplate={handleSelectTemplate} />;
       default:
-        return <LandingPage onNavigate={setCurrentPage} />;
+        return <AuthPage onNavigate={setCurrentPage} />;
     }
   };
 
