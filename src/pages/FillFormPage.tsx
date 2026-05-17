@@ -170,10 +170,24 @@ export default function FillFormPage({ onNavigate }: FillFormPageProps) {
             <CheckCircle2 className="text-blue-500 w-10 h-10 animate-pulse" />
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-white mb-4">Submission Saved!</h2>
-          <p className="text-slate-400 mb-8 font-medium">SmartPulse AI has analyzed your answers for behavioral profiles, traits, and spam verification.</p>
-          <button onClick={() => onNavigate('analysis')} className="w-full btn-primary py-4 text-base flex items-center justify-center gap-2">
-            See Deep Analytics <ArrowRight className="w-5 h-5" />
-          </button>
+          <p className="text-slate-400 mb-8 font-medium">SmartPulse AI has analyzed and recorded your answers successfully.</p>
+          
+          {user && user.role === 'admin' ? (
+            <button onClick={() => onNavigate('analysis')} className="w-full btn-primary py-4 text-base flex items-center justify-center gap-2">
+              See Deep Analytics <ArrowRight className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-green-500/85 font-bold bg-green-500/10 py-2 rounded-xl border border-green-500/20">
+                ✓ Response recorded successfully
+              </p>
+              <button onClick={() => {
+                onNavigate('auth');
+              }} className="w-full btn-secondary py-3 text-sm">
+                Return to Login
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     );
