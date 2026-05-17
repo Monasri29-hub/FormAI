@@ -38,6 +38,16 @@ function AppContent() {
 
   // Authentication Route Guard
   useEffect(() => {
+    // If user is logged in and is on auth or landing page, automatically redirect them to their correct home page
+    if (user && (currentPage === 'auth' || currentPage === 'landing')) {
+      if (user.role === 'admin') {
+        setCurrentPage('dashboard');
+      } else {
+        setCurrentPage('user-portal');
+      }
+      return;
+    }
+
     const adminPages = ['dashboard', 'analysis', 'responses', 'insights', 'spam', 'saved-forms', 'create', 'templates'];
     
     if (adminPages.includes(currentPage)) {
