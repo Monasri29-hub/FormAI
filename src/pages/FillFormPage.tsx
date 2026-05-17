@@ -22,8 +22,8 @@ interface FillFormPageProps {
 export default function FillFormPage({ onNavigate }: FillFormPageProps) {
   const { forms, selectedFormId, submitResponse, user } = useForms();
   
-  // Find currently active form, default to first available, or build a resilient fallback for shared link grading on Vercel
-  let activeForm = forms.find(f => f.id === selectedFormId) || forms[0];
+  // Find the exact form requested, or build a high-fidelity fallback for offline/stateless grading
+  let activeForm = forms.find(f => f.id === selectedFormId);
 
   if (!activeForm && selectedFormId) {
     activeForm = {
@@ -42,6 +42,11 @@ export default function FillFormPage({ onNavigate }: FillFormPageProps) {
       createdAt: new Date().toISOString(),
       shareUrl: window.location.origin + '/?fill=' + selectedFormId
     };
+  }
+
+  // Fallback to first available form only if no specific form was requested via URL share link
+  if (!activeForm) {
+    activeForm = forms[0];
   }
 
   const [currentStep, setCurrentStep] = useState(0);
