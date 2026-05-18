@@ -232,7 +232,7 @@ export default function CreateFormPage({ onNavigate, template, onClearTemplate }
       <header className="bg-slate-950/50 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shrink-0">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => onNavigate('landing')}
+            onClick={() => onNavigate('dashboard')}
             className="p-2 hover:bg-white/10 rounded-xl transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-slate-400" />

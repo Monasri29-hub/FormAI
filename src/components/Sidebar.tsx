@@ -158,7 +158,7 @@ export default function Sidebar({ currentPage, onNavigate, isCollapsed, setIsCol
         <button 
           onClick={() => {
             logout();
-            onNavigate('landing');
+            onNavigate('auth');
           }}
           className={cn(
             "w-full flex items-center gap-4 text-slate-500 hover:text-red-400 p-3.5 rounded-2xl transition-all cursor-pointer",

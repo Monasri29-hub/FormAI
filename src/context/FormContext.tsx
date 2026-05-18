@@ -6,7 +6,7 @@ const API_BASE = `http://${window.location.hostname}:5000/api`;
 interface FormContextType {
   forms: Form[];
   addForm: (form: Form) => Promise<void>;
-  deleteForm: (id: string) => void;
+  deleteForm: (id: string) => Promise<void>;
   updateForm: (id: string, updates: Partial<Form>) => void;
   responses: FormResponse[];
   selectedFormId: string | null;
@@ -256,10 +256,28 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const deleteForm = (id: string) => {
+  const deleteForm = async (id: string) => {
     setForms(prev => prev.filter(f => f.id !== id));
     if (selectedFormId === id) {
       setSelectedFormId(forms.find(f => f.id !== id)?.id || null);
+    }
+
+    // Persistently remove from localStorage
+    const cachedForms = JSON.parse(localStorage.getItem('smartai_forms') || '[]');
+    const updatedForms = cachedForms.filter((f: any) => f.id !== id);
+    localStorage.setItem('smartai_forms', JSON.stringify(updatedForms));
+
+    const cachedResponses = JSON.parse(localStorage.getItem('smartai_responses') || '[]');
+    const updatedResponses = cachedResponses.filter((r: any) => r.formId !== id);
+    localStorage.setItem('smartai_responses', JSON.stringify(updatedResponses));
+
+    // Persistently remove from database server
+    try {
+      await fetch(`${API_BASE}/forms/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('Offline mode: form marked for deletion locally only.', err);
     }
   };
 

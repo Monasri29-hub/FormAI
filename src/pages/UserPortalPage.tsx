@@ -54,7 +54,7 @@ export default function UserPortalPage({ onNavigate }: UserPortalPageProps) {
 
   const handleLogout = () => {
     logout();
-    onNavigate('landing');
+    onNavigate('auth');
   };
 
   if (!user) return null;
@@ -223,7 +223,9 @@ export default function UserPortalPage({ onNavigate }: UserPortalPageProps) {
                     {/* Header info */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
                       <div>
-                        <h3 className="text-lg font-black text-white">{resp.formTitle}</h3>
+                        <h3 className="text-lg font-black text-white">
+                          {forms.find(f => f.id === resp.formId)?.title || resp.formTitle || 'Untitled Smart Form'}
+                        </h3>
                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-wider flex items-center gap-1.5 mt-1">
                           <Clock className="w-3 h-3" />
                           Submitted {new Date(resp.submittedAt).toLocaleDateString()}

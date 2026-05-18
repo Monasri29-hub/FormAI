@@ -424,6 +424,27 @@ app.get('/api/forms/:id', async (req, res) => {
   }
 });
 
+// DELETE a form and all associated responses
+app.delete('/api/forms/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (isMongoConnected) {
+      await FormModel.deleteOne({ id });
+      await ResponseModel.deleteMany({ formId: id });
+      console.log(`🗑️ Deleted form ${id} and all associated responses from MongoDB.`);
+      return res.json({ success: true, message: 'Form and associated responses deleted successfully.' });
+    } else {
+      IN_MEMORY_FORMS = IN_MEMORY_FORMS.filter(f => f.id !== id);
+      IN_MEMORY_RESPONSES = IN_MEMORY_RESPONSES.filter(r => r.formId !== id);
+      console.log(`🗑️ Deleted form ${id} and all associated responses from In-Memory fallback.`);
+      return res.json({ success: true, message: 'Form and associated responses deleted from in-memory successfully.' });
+    }
+  } catch (error: any) {
+    console.error(`Error deleting form ${id}:`, error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 // 5. GET all responses for a form
 app.get('/api/forms/:formId/responses', async (req, res) => {
   const { formId } = req.params;

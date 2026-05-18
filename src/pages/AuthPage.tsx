@@ -265,13 +265,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
         </div>
       </motion.div>
 
-      {/* Back to main landing page */}
-      <button 
-        onClick={() => onNavigate('landing')}
-        className="mt-6 text-slate-500 hover:text-slate-300 text-xs font-black tracking-wide transition-colors"
-      >
-        ← Back to Landing Page
-      </button>
     </div>
   );
 }

@@ -224,16 +224,16 @@ export default function TemplatesPage({ onNavigate, onSelectTemplate }: Template
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
             <button 
-              onClick={() => onNavigate('landing')} 
+              onClick={() => onNavigate('dashboard')} 
               className="hover:text-white transition-all underline-offset-8"
             >
-              Home
+              Dashboard
             </button>
             <button 
-              onClick={() => onNavigate('landing')} 
+              onClick={() => onNavigate('saved-forms')} 
               className="hover:text-white transition-all"
             >
-              Features
+              Saved Forms
             </button>
             <button 
               onClick={() => onNavigate('templates')} 
