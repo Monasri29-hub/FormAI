@@ -227,6 +227,54 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchForms();
   }, []);
 
+  // Silent periodic background synchronization to keep multiple admin dashboards perfectly aligned in real-time!
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      // 1. Silently fetch forms
+      try {
+        const res = await fetch(`${API_BASE}/forms`);
+        if (res.ok) {
+          const data = await res.json();
+          const cachedResponses = JSON.parse(localStorage.getItem('smartai_responses') || '[]');
+          const hydrated = data.map((f: any) => {
+            const actualResponsesCount = cachedResponses.filter((r: any) => r.formId === f.id).length;
+            return {
+              ...f,
+              responsesCount: Math.max(f.responsesCount || 0, actualResponsesCount)
+            };
+          });
+          
+          setForms(prev => {
+            const hasChanged = prev.length !== hydrated.length || 
+              prev.some((f, idx) => f.id !== hydrated[idx]?.id || f.responsesCount !== hydrated[idx]?.responsesCount || f.title !== hydrated[idx]?.title);
+            return hasChanged ? hydrated : prev;
+          });
+        }
+      } catch (err) {
+        // Silently ignore background sync failures
+      }
+
+      // 2. Silently fetch responses for current selected form
+      if (selectedFormId) {
+        try {
+          const res = await fetch(`${API_BASE}/forms/${selectedFormId}/responses`);
+          if (res.ok) {
+            const data = await res.json();
+            setResponses(prev => {
+              const hasChanged = prev.length !== data.length || 
+                prev.some((r, idx) => r.id !== data[idx]?.id);
+              return hasChanged ? data : prev;
+            });
+          }
+        } catch (err) {
+          // Silently ignore background sync failures
+        }
+      }
+    }, 5000); // Sync every 5 seconds
+
+    return () => clearInterval(syncInterval);
+  }, [selectedFormId]);
+
   // Fetch responses for active selected form
   useEffect(() => {
     if (!selectedFormId) {
