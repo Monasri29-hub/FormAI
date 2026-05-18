@@ -53,9 +53,21 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await fetch(`${API_BASE}/forms`);
       if (res.ok) {
         const data = await res.json();
-        setForms(data || []);
-        if (data && data.length > 0) {
-          setSelectedFormId(data[0].id);
+        // Hydrate responsesCount from actual local storage responses to stay in sync
+        const cachedResponses = JSON.parse(localStorage.getItem('smartai_responses') || '[]');
+        const hydrated = data.map((f: any) => {
+          const actualResponsesCount = cachedResponses.filter((r: any) => r.formId === f.id).length;
+          return {
+            ...f,
+            responsesCount: Math.max(f.responsesCount || 0, actualResponsesCount)
+          };
+        });
+        setForms(hydrated || []);
+        if (hydrated && hydrated.length > 0) {
+          const activeId = selectedFormId && hydrated.some((f: any) => f.id === selectedFormId) 
+            ? selectedFormId 
+            : hydrated[0].id;
+          setSelectedFormId(activeId);
         }
       } else {
         // Fallback with seeding
@@ -147,11 +159,20 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('smartai_responses', JSON.stringify(cachedResponses));
         }
 
-        setForms(cachedForms);
-        if (cachedForms.length > 0) {
-          const activeId = selectedFormId && cachedForms.some((f: any) => f.id === selectedFormId) 
+        // Dynamically compute exact responses count for offline forms
+        const hydratedForms = cachedForms.map((f: any) => {
+          const actualResponsesCount = cachedResponses.filter((r: any) => r.formId === f.id).length;
+          return {
+            ...f,
+            responsesCount: actualResponsesCount
+          };
+        });
+
+        setForms(hydratedForms);
+        if (hydratedForms.length > 0) {
+          const activeId = selectedFormId && hydratedForms.some((f: any) => f.id === selectedFormId) 
             ? selectedFormId 
-            : cachedForms[0].id;
+            : hydratedForms[0].id;
           setSelectedFormId(activeId);
         }
       }
@@ -181,11 +202,20 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('smartai_forms', JSON.stringify(cachedForms));
       }
 
-      setForms(cachedForms);
-      if (cachedForms.length > 0) {
-        const activeId = selectedFormId && cachedForms.some((f: any) => f.id === selectedFormId) 
+      const cachedResponses = JSON.parse(localStorage.getItem('smartai_responses') || '[]');
+      const hydratedForms = cachedForms.map((f: any) => {
+        const actualResponsesCount = cachedResponses.filter((r: any) => r.formId === f.id).length;
+        return {
+          ...f,
+          responsesCount: actualResponsesCount
+        };
+      });
+
+      setForms(hydratedForms);
+      if (hydratedForms.length > 0) {
+        const activeId = selectedFormId && hydratedForms.some((f: any) => f.id === selectedFormId) 
           ? selectedFormId 
-          : cachedForms[0].id;
+          : hydratedForms[0].id;
         setSelectedFormId(activeId);
       }
     } finally {
