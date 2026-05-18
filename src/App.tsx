@@ -16,9 +16,27 @@ import { FormProvider, useForms } from './context/FormContext';
 import { Page, Template } from './types';
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState<Page | any>('auth');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const { user, setSelectedFormId } = useForms();
+
+  // Derive the initial page from the stored session so admins always land on
+  // the dashboard immediately — even on a hard refresh — without a flash of
+  // the auth screen.
+  const getInitialPage = (): Page | string => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('fill') || params.get('form')) return 'fill';
+
+    const stored = localStorage.getItem('smartai_user');
+    if (stored) {
+      try {
+        const u = JSON.parse(stored);
+        return u.role === 'admin' ? 'dashboard' : 'user-portal';
+      } catch { /* ignore */ }
+    }
+    return 'auth';
+  };
+
+  const [currentPage, setCurrentPage] = useState<Page | any>(getInitialPage);
 
   // Smooth scroll to top on page change
   useEffect(() => {
@@ -36,32 +54,41 @@ function AppContent() {
     }
   }, [setSelectedFormId]);
 
-  // Authentication Route Guard
+  // Authentication Route Guard — uses localStorage as source of truth to avoid
+  // the React state-update race condition where user is briefly null right after
+  // login() resolves but before setUser() re-renders.
   useEffect(() => {
-    // If user is logged in and is on auth or landing page, automatically redirect them to their correct home page
-    if (user && (currentPage === 'auth' || currentPage === 'landing')) {
-      if (user.role === 'admin') {
-        setCurrentPage('dashboard');
-      } else {
-        setCurrentPage('user-portal');
+    const getStoredUser = () => {
+      try {
+        const stored = localStorage.getItem('smartai_user');
+        return stored ? JSON.parse(stored) : null;
+      } catch {
+        return null;
       }
+    };
+
+    const activeUser = user || getStoredUser();
+
+    // If authenticated and stuck on auth/landing, redirect to correct home
+    if (activeUser && (currentPage === 'auth' || currentPage === 'landing')) {
+      setCurrentPage(activeUser.role === 'admin' ? 'dashboard' : 'user-portal');
       return;
     }
 
     const adminPages = ['dashboard', 'analysis', 'responses', 'insights', 'spam', 'saved-forms', 'create', 'templates'];
-    
+
     if (adminPages.includes(currentPage)) {
-      if (!user) {
+      if (!activeUser) {
         console.log('🔒 Unauthenticated access to admin page. Redirecting to Auth page.');
         setCurrentPage('auth');
-      } else if (user.role !== 'admin') {
+      } else if (activeUser.role !== 'admin') {
         console.log('🔒 Unauthorized access. Standard users redirected to User Portal.');
         setCurrentPage('user-portal');
       }
     } else if (currentPage === 'user-portal') {
-      if (!user) {
+      if (!activeUser) {
         setCurrentPage('auth');
-      } else if (user.role === 'admin') {
+      } else if (activeUser.role === 'admin') {
         setCurrentPage('dashboard');
       }
     }
